@@ -33,10 +33,10 @@ class DataArguments:
     lazy_preprocess: bool = False
     is_multimodal: bool = False
     image_folder: Optional[str] = field(default=None)
+    image_aspect_ratio: str = 'square'
     video_folder: Optional[str] = field(default=None)
     video_fps: Optional[int] = field(default=0)
     video_token: Optional[int] = field(default=2)
-    image_aspect_ratio: str = 'square'
     image_grid_pinpoints: Optional[str] = field(default=None)
     input_prompt: Optional[str] = field(default=None)
     refine_prompt: Optional[bool] = field(default=False)
