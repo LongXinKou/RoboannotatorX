@@ -5,9 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a5dd95a9-d009-47bd-b838-85c5dda2bba3" name="更改" comment="readme">
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/language_model/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/language_model/llava_llama_roboannotatorx.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/builder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/clip_encoder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/eva_vit_encoder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_projector/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_projector/builder.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/roboannotatorx/train/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,6 +80,7 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx\roboannotatorx\model\language_model" />
       <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx" />
     </key>
   </component>
@@ -119,7 +127,10 @@
       <workItem from="1746776452231" duration="306000" />
       <workItem from="1746776766443" duration="4331000" />
       <workItem from="1746781148996" duration="4945000" />
-      <workItem from="1746796535621" duration="2375000" />
+      <workItem from="1746796535621" duration="3450000" />
+      <workItem from="1747207706225" duration="89000" />
+      <workItem from="1747207811668" duration="109000" />
+      <workItem from="1747383449087" duration="2283000" />
     </task>
     <task id="LOCAL-00001" summary="readme">
       <option name="closed" value="true" />
