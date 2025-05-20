@@ -44,7 +44,8 @@ class RoboAnnotatorMetaModel:
     def __init__(self, config):
         super(RoboAnnotatorMetaModel, self).__init__(config)
 
-        if hasattr(config, "mm_vision_tower"): # evaluation
+        # For evaluation mode: if vision tower is defined in config, build it with delayed loading
+        if hasattr(config, "mm_vision_tower"):
             self.vision_tower = build_vision_tower(config, delay_load=True)
             self.mm_projector = build_vision_projector(config)
 
@@ -112,8 +113,10 @@ class RoboAnnotatorMetaModel:
             for _model in model_path:
                 mm_projector_weights.update(torch.load(os.path.join(model_save_path, _model), map_location='cpu'))
 
+        # If no projector weights found, skip loading
         if len(mm_projector_weights) == 0:
             return
+
         self.mm_projector.load_state_dict(get_w(mm_projector_weights, 'mm_projector'))
         self.video_frame_position_embedding.load_state_dict(get_w(mm_projector_weights, 'video_frame_position_embedding'))
 
