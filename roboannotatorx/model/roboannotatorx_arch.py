@@ -657,8 +657,10 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                 image_token_indices = torch.where(cur_input_ids == IMAGE_TOKEN_INDEX)[0]
                 token_idx += 1
 
-            # changle image idx after processing one sample
+            # change image idx after processing one sample
             cur_image_idx += 1
+
+            # If there are remaining tokens after all image tokens are processed
             if cur_input_ids.numel() > 0:
                 if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end',
                                                                                   False):
@@ -667,6 +669,8 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids))
                 if labels is not None:
                     cur_new_labels.append(cur_labels)
+
+            # Move all embeddings to the correct device and concatenate
             cur_new_input_embeds = [x.to(device=self.device) for x in cur_new_input_embeds]
             cur_new_input_embeds = torch.cat(cur_new_input_embeds, dim=0)
             new_input_embeds.append(cur_new_input_embeds)
@@ -674,10 +678,12 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                 cur_new_labels = torch.cat(cur_new_labels, dim=0)
                 new_labels.append(cur_new_labels)
 
+        # Check if all new input embeddings have the same shape
         if any(x.shape != new_input_embeds[0].shape for x in new_input_embeds):
             max_len = max(x.shape[0] for x in new_input_embeds)
 
             new_input_embeds_align = []
+            # Pad all embeddings to the maximum length with zeros
             for cur_new_embed in new_input_embeds:
                 cur_new_embed = torch.cat((cur_new_embed,
                                            torch.zeros((max_len - cur_new_embed.shape[0], cur_new_embed.shape[1]),
@@ -688,6 +694,7 @@ class RoboAnnotatorMetaForCausalLM(ABC):
             if labels is not None:
                 new_labels_align = []
                 _new_labels = new_labels
+                # Pad labels to max length with IGNORE_INDEX
                 for cur_new_label in new_labels:
                     cur_new_label = torch.cat((cur_new_label,
                                                torch.full((max_len - cur_new_label.shape[0],), IGNORE_INDEX,
