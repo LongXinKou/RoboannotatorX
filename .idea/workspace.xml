@@ -5,16 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a5dd95a9-d009-47bd-b838-85c5dda2bba3" name="更改" comment="readme">
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/language_model/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/language_model/llava_llama_roboannotatorx.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/builder.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/clip_encoder.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_encoder/eva_vit_encoder.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_projector/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/multimodal_projector/builder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/processor/clip-patch14-224/config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/processor/clip-patch14-224/preprocessor_config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/roboannotatorx/model/roboannotatorx_arch.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/roboannotatorx/train/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,6 +20,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="package.json" />
       </list>
     </option>
   </component>
@@ -130,7 +126,7 @@
       <workItem from="1746796535621" duration="3450000" />
       <workItem from="1747207706225" duration="89000" />
       <workItem from="1747207811668" duration="109000" />
-      <workItem from="1747383449087" duration="2283000" />
+      <workItem from="1747383449087" duration="29837000" />
     </task>
     <task id="LOCAL-00001" summary="readme">
       <option name="closed" value="true" />

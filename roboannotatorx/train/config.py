@@ -25,6 +25,7 @@ class ModelArguments:
     pretrain_qformer: Optional[str] = field(default=None) # qformer
     compress_type: Optional[str] = field(default=None)
     interval: int = 30
+    max_frame_pos: Optional[int] = field(default=1000)
 
 @dataclass
 class DataArguments:
