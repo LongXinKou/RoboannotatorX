@@ -282,9 +282,11 @@ class RoboAnnotatorMetaModel:
         '''
         Initialize Q-former with text
         '''
+
         # initialize BERT tokenizer
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", truncation_side=truncation_side)
         tokenizer.add_special_tokens({"bos_token": "[DEC]"})
+
         # initialize BERT
         encoder_config = BertConfig.from_pretrained("bert-base-uncased")
         encoder_config.encoder_width = vision_width
@@ -292,6 +294,7 @@ class RoboAnnotatorMetaModel:
         encoder_config.add_cross_attention = True
         encoder_config.cross_attention_freq = cross_attention_freq
 
+        # Load BERT-based Q-former model with the modified config
         Qformer = BertLMHeadModelQF.from_pretrained(
             "bert-base-uncased", config=encoder_config
         )
