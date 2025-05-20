@@ -754,12 +754,14 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                 input_embeddings[-num_new_tokens:] = input_embeddings_avg
                 output_embeddings[-num_new_tokens:] = output_embeddings_avg
 
+            # If tuning the multi-modal adapter, only make input embeddings trainable
             if model_args.tune_mm_mlp_adapter:
                 for p in self.get_input_embeddings().parameters():
                     p.requires_grad = True
                 for p in self.get_output_embeddings().parameters():
                     p.requires_grad = False
 
+            # If using a pretrained multi-modal adapter, load the pretrained weights
             if model_args.pretrain_mm_mlp_adapter:
                 mm_projector_weights = torch.load(model_args.pretrain_mm_mlp_adapter, map_location='cpu')
                 embed_tokens_weight = mm_projector_weights['model.embed_tokens.weight']
