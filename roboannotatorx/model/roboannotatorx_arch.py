@@ -19,13 +19,11 @@
 from abc import ABC, abstractmethod
 import os
 import json
-import numpy as np
 import einops
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sympy import false
 
 from transformers import BertTokenizer
 from transformers.models.bert.modeling_bert import BertLMHeadModel as BertLMHeadModelRaw
