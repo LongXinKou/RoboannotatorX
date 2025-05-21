@@ -56,28 +56,34 @@ def split_to_even_chunks(indices, lengths, num_chunks):
 
 
 def get_modality_length_grouped_indices(lengths, batch_size, world_size, generator=None):
-    # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
+    """
+    Group indices by modality (multimodal vs language-only) and then by length.
+    This creates batches that contain similar types of data for efficient processing.
+    """
     assert all(l != 0 for l in lengths), "Should not have zero length."
+    if all(l > 0 for l in lengths) or all(l < 0 for l in lengths):
+        # all samples are in the same modality
+        return get_length_grouped_indices(lengths, batch_size, world_size, generator=generator)
+
+    # Separate multimodal samples (positive lengths) from language-only samples (negative lengths)
     mm_indices, mm_lengths = zip(*[(i, l) for i, l in enumerate(lengths) if l > 0])
     lang_indices, lang_lengths = zip(*[(i, -l) for i, l in enumerate(lengths) if l < 0])
-    # filtered_list = [(i, -l) for i, l in enumerate(lengths) if l < 0]
-    # if not filtered_list:
-    #     raise ValueError("No elements in 'lengths' are less than 0.")
-    # lang_indices, lang_lengths = zip(*filtered_list)
-
-    assert len(mm_indices) > 0, "Should have at least one multimodal sample."
-    assert len(lang_indices) > 0, "Should have at least one language sample."
 
     mm_shuffle = [mm_indices[i] for i in get_length_grouped_indices(mm_lengths, batch_size, world_size, generator=None)]
-    lang_shuffle = [lang_indices[i] for i in
-                    get_length_grouped_indices(lang_lengths, batch_size, world_size, generator=None)]
+    lang_shuffle = [lang_indices[i] for i in get_length_grouped_indices(lang_lengths, batch_size, world_size, generator=None)]
+
+    # Divide into megabatches (data processed by all GPUs in one step)
     megabatch_size = world_size * batch_size
+    # Split shuffled indices into megabatches
     mm_megabatches = [mm_shuffle[i: i + megabatch_size] for i in range(0, len(mm_shuffle), megabatch_size)]
     lang_megabatches = [lang_shuffle[i: i + megabatch_size] for i in range(0, len(lang_shuffle), megabatch_size)]
 
+    # Handle the last partial megabatches from each modality
     last_mm = mm_megabatches[-1]
     last_lang = lang_megabatches[-1]
     additional_batch = last_mm + last_lang
+
+    # Randomly shuffle the order of complete megabatches
     megabatches = mm_megabatches[:-1] + lang_megabatches[:-1]
     megabatch_indices = torch.randperm(len(megabatches), generator=generator)
     megabatches = [megabatches[i] for i in megabatch_indices]
@@ -89,17 +95,23 @@ def get_modality_length_grouped_indices(lengths, batch_size, world_size, generat
     if len(additional_batch) > 0:
         megabatches.append(additional_batch)
 
+    # Flatten the list of megabatches
     return [i for megabatch in megabatches for i in megabatch]
 
 
 def get_length_grouped_indices(lengths, batch_size, world_size, generator=None, merge=True):
-    # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
+    """
+    Group indices by sequence length to minimize padding and improve training efficiency.
+    """
     indices = torch.randperm(len(lengths), generator=generator)
+    # Divide into megabatches (data processed by all GPUs in one step)
     megabatch_size = world_size * batch_size
     megabatches = [indices[i: i + megabatch_size].tolist() for i in range(0, len(lengths), megabatch_size)]
+    # Sort each megabatch by length (longest first)
     megabatches = [sorted(megabatch, key=lambda i: lengths[i], reverse=True) for megabatch in megabatches]
+    # Split each sorted megabatch into chunks for each GPU
     megabatches = [split_to_even_chunks(megabatch, lengths, world_size) for megabatch in megabatches]
-
+    # Flatten into a single list
     return [i for megabatch in megabatches for batch in megabatch for i in batch]
 
 
@@ -142,6 +154,9 @@ class LengthGroupedSampler(Sampler):
 class LLaVATrainer(Trainer):
 
     def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
+        """
+        Create a custom sampler for training data that handles multimodal inputs.
+        """
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
@@ -150,7 +165,7 @@ class LLaVATrainer(Trainer):
             print(self.train_dataset)
             return LengthGroupedSampler(
                 self.args.train_batch_size,
-                world_size=self.args.world_size,  # * self.args.gradient_accumulation_steps, # Keep raw setting
+                world_size=self.args.world_size * self.args.gradient_accumulation_steps, # Keep raw setting
                 lengths=lengths,
                 group_by_modality=True,
             )
