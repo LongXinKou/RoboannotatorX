@@ -20,7 +20,6 @@
 import os
 import pathlib
 import math
-from typing import Dict, Any, Optional, List, Tuple
 
 import torch
 import transformers
@@ -33,10 +32,11 @@ from roboannotatorx.model import LlavaLlamaRobotForCausalLM
 from train_utils import (
     get_peft_state_maybe_zero_3,
     get_peft_state_non_lora_maybe_zero_3,
+    get_mm_adapter_state_maybe_zero_3,
+    smart_tokenizer_and_embedding_resize,
 )
 from config import DataArguments, ModelArguments, TrainingArguments
 from dataset import make_supervised_data_module, rank0_print
-from train_utils import get_mm_adapter_state_maybe_zero_3
 
 def find_all_linear_names(model):
     cls = torch.nn.Linear
