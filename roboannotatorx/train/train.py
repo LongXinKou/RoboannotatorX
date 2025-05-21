@@ -1,22 +1,21 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-RoboannotatorX Training Script
-========================
-
-This module provides a comprehensive training pipeline for RoboannotatorX models,
-supporting multimodal training with vision-language capabilities.
-
-Features:
-- Supports LoRA fine-tuning
-- Handles vision tower integration
-- Configurable quantization (4-bit, 8-bit)
-- Gradient checkpointing for memory efficiency
-- RoPE scaling for extended context length
-
-Author: [Your Name]
-License: [License Type e.g., MIT, Apache 2.0]
-"""
+# Adopted from https://github.com/lm-sys/FastChat. Below is the original copyright:
+# Adopted from tatsu-lab@stanford_alpaca. Below is the original copyright:
+#    Copyright 2023 Rohan Taori, Ishaan Gulrajani, Tianyi Zhang, Yann Dubois, Xuechen Li
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+# ------------------------------------------------------------------------
+# Modified from LLaVA (https://github.com/haotian-liu/LLaVA)
+# ------------------------------------------------------------------------
 
 import os
 import pathlib
@@ -37,6 +36,7 @@ from train_utils import (
 )
 from config import DataArguments, ModelArguments, TrainingArguments
 from dataset import make_supervised_data_module, rank0_print
+from train_utils import get_mm_adapter_state_maybe_zero_3
 
 def find_all_linear_names(model):
     cls = torch.nn.Linear
@@ -53,6 +53,44 @@ def find_all_linear_names(model):
     if 'lm_head' in lora_module_names: # needed for 16-bit
         lora_module_names.remove('lm_head')
     return list(lora_module_names)
+
+def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
+                                   output_dir: str):
+    """Collects the state dict and dump to disk."""
+
+    if getattr(trainer.args, "tune_mm_mlp_adapter", False):
+        keys_to_match = ['mm_projector', 'vision_resampler',
+                         'vlm_att', 'clip_qformer', 'motion_encoder']
+        if getattr(trainer.args, "use_im_start_end", False):
+            keys_to_match.extend(['embed_tokens', 'embed_in'])
+
+        weight_to_save = get_mm_adapter_state_maybe_zero_3(trainer.model.named_parameters(), keys_to_match)
+        trainer.model.config.save_pretrained(output_dir)
+
+        current_folder = output_dir.split('/')[-1]
+        parent_folder = os.path.dirname(output_dir)
+        if trainer.args.local_rank == 0 or trainer.args.local_rank == -1:
+            if current_folder.startswith('checkpoint-'):
+                mm_projector_folder = os.path.join(parent_folder, "mm_projector")
+                os.makedirs(mm_projector_folder, exist_ok=True)
+                torch.save(weight_to_save, os.path.join(mm_projector_folder, f'{current_folder}.bin'))
+            else:
+                torch.save(weight_to_save, os.path.join(output_dir, f'mm_projector.bin'))
+        return
+
+    if trainer.deepspeed:
+        torch.cuda.synchronize()
+        trainer.save_model(output_dir)
+        return
+
+    state_dict = trainer.model.state_dict()
+    if trainer.args.should_save:
+        cpu_state_dict = {
+            key: value.cpu()
+            for key, value in state_dict.items()
+        }
+        del state_dict
+        trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
 
 def train():
     global local_rank
