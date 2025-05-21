@@ -186,6 +186,7 @@ class LLaVATrainer(Trainer):
 
         opt_model = self.model
 
+        # Parse learning rate multipliers if provided
         if self.args.lr_multi is not None:
             lr_multi_dict = {}
             for _dict in self.args.lr_multi.split('\\'):
@@ -195,6 +196,7 @@ class LLaVATrainer(Trainer):
         if self.optimizer is None:
             decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
             decay_parameters = [name for name in decay_parameters if "bias" not in name]
+
             if self.args.lr_multi is not None:
                 optimizer_grouped_parameters = [
                     {
@@ -214,6 +216,7 @@ class LLaVATrainer(Trainer):
                         "weight_decay": 0.0,
                     },
                 ]
+                # Create additional parameter groups with custom learning rates
                 for _key in lr_multi_dict:
                     _key_decay = [
                         p for n, p in opt_model.named_parameters() if
@@ -241,6 +244,7 @@ class LLaVATrainer(Trainer):
                         )
 
             else:
+                # Standard parameter grouping (with/without weight decay)
                 optimizer_grouped_parameters = [
                     {
                         "params": [
