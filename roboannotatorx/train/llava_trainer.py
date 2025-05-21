@@ -277,7 +277,7 @@ class LLaVATrainer(Trainer):
             output_dir = os.path.join(run_dir, checkpoint_folder)
 
             # Only save Adapter
-            keys_to_match = ['mm_projector', 'vision_resampler', 'vlm_att', 'clip_qformer', 'video_frame_position_embedding']
+            keys_to_match = ['mm_projector', 'vision_resampler', 'vlm_att', 'clip_qformer', 'motion_encoder']
             if getattr(self.args, "use_im_start_end", False):
                 keys_to_match.extend(['embed_tokens', 'embed_in'])
 

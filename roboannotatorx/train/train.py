@@ -38,6 +38,21 @@ from train_utils import (
 from config import DataArguments, ModelArguments, TrainingArguments
 from dataset import make_supervised_data_module, rank0_print
 
+def find_all_linear_names(model):
+    cls = torch.nn.Linear
+    lora_module_names = set()
+    multimodal_keywords = ['mm_projector', 'vision_tower', 'vision_resampler',
+                           'vlm_att', 'clip_qformer', 'motion_encoder']
+    for name, module in model.named_modules():
+        if any(mm_keyword in name for mm_keyword in multimodal_keywords):
+            continue
+        if isinstance(module, cls):
+            names = name.split('.')
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+    if 'lm_head' in lora_module_names: # needed for 16-bit
+        lora_module_names.remove('lm_head')
+    return list(lora_module_names)
 
 def train():
     global local_rank
@@ -47,11 +62,13 @@ def train():
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     local_rank = training_args.local_rank
+    # Set computation precision
     compute_dtype = (torch.float16 if training_args.fp16 else (torch.bfloat16 if training_args.bf16 else torch.float32))
     bnb_model_from_pretrained_args = dict(
         torch_dtype=(
             torch.float32 if training_args.fp16 else (torch.bfloat16 if training_args.bf16 else torch.float32)),
     )
+    # Setup quantization configuration
     if training_args.bits in [4, 8]:
         from transformers import BitsAndBytesConfig
         bnb_model_from_pretrained_args.update(dict(
@@ -69,12 +86,12 @@ def train():
             )
         ))
 
-    # model-config
+    # Load model configuration from pretrained checkpoint
     config = transformers.AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
     orig_rope_scaling = getattr(config, "rope_scaling", None)
     if orig_rope_scaling is None:
         orig_rope_scaling = {"factor": 1}
-
+    # Calculate RoPE scaling factor for context length extension
     orig_rope_scaling_factor = orig_rope_scaling["factor"] if "factor" in orig_rope_scaling.keys() else 1
     orig_ctx_len = getattr(config, "max_position_embeddings", None)
     if orig_ctx_len:
@@ -83,8 +100,9 @@ def train():
             scaling_factor = float(math.ceil(training_args.model_max_length / orig_ctx_len))
             config.rope_scaling = {"type": "linear", "factor": scaling_factor}
 
-    # Loading LLM for 'model_name_or_path'
+    # LLM
     if model_args.vision_tower is not None:
+        # Load multimodal (vision+language) model
         model = LlavaLlamaRobotForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             config=config,
@@ -92,6 +110,7 @@ def train():
             **bnb_model_from_pretrained_args
         )
     else:
+        # Load language-only model
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             config=config,
@@ -103,6 +122,7 @@ def train():
     if model_args.freeze_backbone:
         model.model.requires_grad_(False)
 
+    # Prepare model for quantized training if applicable
     if training_args.bits in [4, 8]:
         from peft import prepare_model_for_kbit_training
         model.config.torch_dtype = (
@@ -121,43 +141,24 @@ def train():
     # LoRA
     if training_args.lora_enable:
         from peft import PeftModel, LoraConfig, get_peft_model
-        pretrain_lora_adapter = getattr(model.config, "pretrain_lora_adapter", None)
-        if pretrain_lora_adapter is None:  # stage 2
-            print("Initializing new LoRA adapter...")
-            lora_config = LoraConfig(
-                r=training_args.lora_r,
-                lora_alpha=training_args.lora_alpha,
-                target_modules=find_all_linear_names(model),
-                lora_dropout=training_args.lora_dropout,
-                bias=training_args.lora_bias,
-                task_type="CAUSAL_LM",
-            )
-            model = get_peft_model(model, lora_config)
-        else:  # stage 3
-            print("Loading pretrained LoRA adapter...")
-            model = PeftModel.from_pretrained(model, pretrain_lora_adapter)
-            pretrained_lora_config = model.peft_config['default']
-            lora_config = LoraConfig(
-                r=pretrained_lora_config.r,  # Keep the same rank
-                lora_alpha=pretrained_lora_config.lora_alpha,
-                target_modules=pretrained_lora_config.target_modules,
-                lora_dropout=training_args.lora_dropout,  # Allow new dropout value
-                bias=training_args.lora_bias,  # Allow new bias setting
-                task_type="CAUSAL_LM",
-            )
-            lora_state_dict = model.lora_state_dict()
-            model = get_peft_model(model.base_model, lora_config)
-            model.load_state_dict(lora_state_dict, strict=False)
-        model.print_trainable_parameters()
-
+        lora_config = LoraConfig(
+            r=training_args.lora_r,
+            lora_alpha=training_args.lora_alpha,
+            target_modules=find_all_linear_names(model),
+            lora_dropout=training_args.lora_dropout,
+            bias=training_args.lora_bias,
+            task_type="CAUSAL_LM",
+        )
         if training_args.bits == 16:
             if training_args.bf16:
                 model.to(torch.bfloat16)
             if training_args.fp16:
                 model.to(torch.float16)
         rank0_print("Adding LoRA adapters...")
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
 
-        # Tokenizer
+    # Tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -165,11 +166,24 @@ def train():
         padding_side="right",
         use_fast=False,
     )
-    tokenizer.pad_token = tokenizer.unk_token
-    if model_args.version in conversation_lib.conv_templates:
-        conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
+
+    # Prompt
+    rank0_print(f"Prompt version: {model_args.version}")
+    if model_args.version == "v0":
+        if tokenizer.pad_token is None:
+            smart_tokenizer_and_embedding_resize(
+                special_tokens_dict=dict(pad_token="[PAD]"),
+                tokenizer=tokenizer,
+                model=model,
+            )
+    elif model_args.version == "v0.5":
+        tokenizer.pad_token = tokenizer.unk_token
     else:
-        conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
+        tokenizer.pad_token = tokenizer.unk_token
+        if model_args.version in conversation_lib.conv_templates:
+            conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
+        else:
+            conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 
     # Vision Encoder(vision_tower, mm_projector)
     if model_args.vision_tower is not None:

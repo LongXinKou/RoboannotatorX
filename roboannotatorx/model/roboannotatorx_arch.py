@@ -96,15 +96,10 @@ class RoboAnnotatorMetaModel:
             for p in self.mm_projector.parameters():
                 p.requires_grad = True
 
-        if getattr(self, 'video_frame_position_embedding', None) is None: # Pretraining
-            self.video_frame_position_embedding = nn.Embedding(max_frame_pos, self.vision_tower.out_channel)
-        else:
-            self.video_frame_position_embedding.weight.requires_grad = True
-
         if pretrain_mm_mlp_adapter is not None:
             mm_projector_weights = torch.load(pretrain_mm_mlp_adapter, map_location='cpu')
         else:
-            trainable_module = ["mm_projector", "video_frame_position_embedding"]
+            trainable_module = ["mm_projector"]
             weight_file = json.load(open(os.path.join(model_save_path, 'pytorch_model.bin.index.json'), 'r'))[
                 'weight_map']
             model_path = set([weight_file[_key] for _key in weight_file if
@@ -116,15 +111,12 @@ class RoboAnnotatorMetaModel:
         # If no projector weights found, skip loading
         if len(mm_projector_weights) == 0:
             return
-
         self.mm_projector.load_state_dict(get_w(mm_projector_weights, 'mm_projector'))
-        self.video_frame_position_embedding.load_state_dict(get_w(mm_projector_weights, 'video_frame_position_embedding'))
 
         if for_eval:
             weight_type = torch.float16
             device_type = self.mm_projector[0].weight.device
             self.vision_tower = self.vision_tower.to(device=device_type, dtype=weight_type)
-            self.video_frame_position_embedding = self.video_frame_position_embedding.to(device=device_type, dtype=weight_type)
 
     def initialize_attention_modules(self, model_args, for_eval=False):
         def get_w(weights, keyword):
@@ -379,18 +371,8 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                 attention_masks = input_token.attention_mask
 
                 # 1. Visual embedding
-                # Timestamp Token
-                max_pos = self.get_model().video_frame_position_embedding.num_embeddings
-                position_ids = torch.arange(image_counts[_idx], dtype=torch.long, device=image_features.device)
-                position_ids = position_ids.unsqueeze(0).expand(len(prompts[_idx]), -1)  # (prompt_num, frame_num)
-                position_ids = position_ids % max_pos  # recurrent position index
-                frame_position_embeddings = self.get_model().video_frame_position_embedding(
-                    position_ids)  # (prompt_num, frame_num, hidden_size)
-
                 img_feat_prompt = image_features[total_count:total_count + image_counts[_idx]]
-                img_feat_prompt = img_feat_prompt[None].expand(len(prompts[_idx]), -1, -1, -1)
-                img_feat_prompt = (img_feat_prompt + frame_position_embeddings.unsqueeze(2)).flatten(0,
-                                                                                                     1)  # (prompt_num * frame_num, image_shape, hidden_size)
+                img_feat_prompt = img_feat_prompt[None].expand(len(prompts[_idx]), -1, -1, -1)  # (prompt_num * frame_num, image_shape, hidden_size)
                 img_att_prompt = image_atts[total_count:total_count + image_counts[_idx]]
                 img_att_prompt = img_att_prompt[None].expand(len(prompts[_idx]), -1, -1).flatten(0, 1)
 
