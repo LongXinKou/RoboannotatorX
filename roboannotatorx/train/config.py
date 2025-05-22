@@ -41,6 +41,7 @@ class DataArguments:
     image_grid_pinpoints: Optional[str] = field(default=None)
     input_prompt: Optional[str] = field(default=None)
     refine_prompt: Optional[bool] = field(default=False)
+    video_stride: Optional[int] = field(default=1)
 
 
 @dataclass

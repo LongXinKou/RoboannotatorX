@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 
-from roboannotatorx.mm_utils import tokenizer_image_token, process_video_with_decord
+from roboannotatorx.mm_utils import tokenizer_image_token, process_video_with_decord, process_images
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from roboannotatorx import conversation as conversation_lib
 
@@ -823,27 +823,13 @@ class LazySupervisedDataset(Dataset):
                     image_file = self.list_data_dict[i]['image']
                     image_folder = self.data_args.image_folder
                     processor = self.data_args.image_processor
-
                     image_file = os.path.join(image_folder, image_file)
-                    image = Image.open(image_file).convert('RGB')
-                    if self.data_args.image_aspect_ratio == 'pad':
-                        def expand2square(pil_img, background_color):
-                            width, height = pil_img.size
-                            if width == height:
-                                return pil_img
-                            elif width > height:
-                                result = Image.new(pil_img.mode, (width, width), background_color)
-                                result.paste(pil_img, (0, (width - height) // 2))
-                                return result
-                            else:
-                                result = Image.new(pil_img.mode, (height, height), background_color)
-                                result.paste(pil_img, ((height - width) // 2, 0))
-                                return result
+                    image_aspect_ratio = getattr(self.data_args, "image_aspect_ratio", None)
 
-                        image = expand2square(image, tuple(int(x * 255) for x in processor.image_mean))
-                        image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    else:
-                        image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
+                    image = process_images(images=[image_file],
+                                           image_processor=processor,
+                                           image_aspect_ratio=image_aspect_ratio)[0]
+
                     sources = preprocess_multimodal(
                         copy.deepcopy([e["conversations"] for e in sources]),
                         self.data_args)
@@ -851,10 +837,11 @@ class LazySupervisedDataset(Dataset):
                     video_file = self.list_data_dict[i]['video']
                     video_folder = self.data_args.video_folder
                     video_file = os.path.join(video_folder, video_file)
-                    video, totoal_frame_num = process_video_with_decord(video_file)
-
                     processor = self.data_args.image_processor
-                    image = processor.preprocess(video, return_tensors='pt')['pixel_values']
+
+                    video, total_frame_num = process_video_with_decord(video_path=video_file,
+                                                      video_fps=self.data_args.video_fps,
+                                                      video_stride=self.data_args.video_stride)
                     sources = preprocess_multimodal(
                         copy.deepcopy([e["conversations"] for e in sources]),
                         self.data_args)
@@ -888,7 +875,7 @@ class LazySupervisedDataset(Dataset):
         if 'image' in self.list_data_dict[i]:
             data_dict['image'] = image
         elif 'video' in self.list_data_dict[i]:
-            data_dict['image'] = image
+            data_dict['image'] = video
         elif self.data_args.is_multimodal:
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
