@@ -7,7 +7,7 @@ import os
 
 from tqdm import tqdm
 
-from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
+from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from roboannotatorx.conversation import conv_templates, SeparatorStyle
 from roboannotatorx.model.builder import load_roboannotator
@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument("--conv-mode", type=str, default=None)
     parser.add_argument("--model-max-length", type=int, default=None)
     parser.add_argument("--video_fps", type=int, default=1)
+    parser.add_argument("--video_stride", type=int, default=2)
 
     parser.add_argument('--video_dir', help='Directory containing video files.', default=None)
     parser.add_argument('--gt_file_question', help='Path to the ground truth file containing question.', default=None)
@@ -101,8 +102,13 @@ def run_inference(args):
 
         # Check if the video exists
         if os.path.exists(video_path):
-            video, total_frame = load_video(video_path, args.video_fps)
-            total_frames.append(total_frame)
+            video, total_frame_num = process_video_with_decord(
+                video_path = video_path,
+                image_processor=image_processor,
+                video_fps = args.video_fps,
+                video_stride = args.video_stride,
+            )
+            total_frames.append(total_frame_num)
             video = image_processor.preprocess(video, return_tensors='pt')['pixel_values'].half().cuda()
             video = [video]
 
