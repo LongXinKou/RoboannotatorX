@@ -1,5 +1,6 @@
 import argparse
 import torch
+import math
 import random
 import numpy as np
 import json
@@ -9,7 +10,7 @@ import os
 from tqdm import tqdm
 
 from roboannotatorx.utils import disable_torch_init
-from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord
+from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord, process_images
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from roboannotatorx.conversation import conv_templates, SeparatorStyle
 from roboannotatorx.model.builder import load_roboannotator
@@ -35,7 +36,8 @@ def parse_args():
 
     # TestArguments
     parser.add_argument('--output_dir', help='Directory to save the model results JSON.', default=None)
-    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument('--max_new_tokens', type=int, default=1024)
     parser.add_argument('--seed', type=int, default=42)
 
     return parser.parse_args()
@@ -135,37 +137,41 @@ def run_inference(args):
     total_frames = []
     for sample in tqdm(test_dataset):
         if 'image' in sample:
-            pass
+            image_name = sample['image']
+            image_path = os.path.join(args.image_folder, image_name)
+            qs = sample['conversations'][0]['value']
+            answer = sample['conversations'][1]['value']
+            question_type = sample['question_type']
+            sample_set = {'id': image_name, 'question': qs, 'answer': answer, 'question_type': question_type}
+
+            images = process_images(images=[image_path],
+                                   image_processor=image_processor,
+                                   image_aspect_ratio=model.config.image_aspect_ratio)
+
         elif 'video' in sample:
-        video_name = sample['video']
-        question = sample['conversations'][0]['value']
-        answer = sample['conversations'][1]['value']
-        question_type = sample['question_type']
+            video_name = sample['video']
+            video_path = os.path.join(args.video_folder, video_name)
+            qs = sample['conversations'][0]['value']
+            answer = sample['conversations'][1]['value']
+            question_type = sample['question_type']
+            sample_set = {'id': video_name, 'question': qs, 'answer': answer, 'question_type': question_type}
 
-        sample_set = {'id': video_name, 'question': question, 'answer': answer, 'question_type': question_type}
-
-
-        # Load the video file
-        video_path = os.path.join(args.video_dir, video_name)
-
-        # Check if the video exists
-        if os.path.exists(video_path):
             video, total_frame_num = process_video_with_decord(
-                video_path = video_path,
+                video_path=video_path,
                 image_processor=image_processor,
-                video_fps = args.video_fps,
-                video_stride = args.video_stride,
+                video_fps=args.video_fps,
+                video_stride=args.video_stride,
             )
             total_frames.append(total_frame_num)
-            video = image_processor.preprocess(video, return_tensors='pt')['pixel_values'].half().cuda()
-            video = [video]
+            images = [video]
 
-        qs = question
+        # Preprocesses multimodal conversation data by handling image tokens and formatting.
         if model.config.mm_use_im_start_end:
             qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + qs
         else:
-            if DEFAULT_IMAGE_TOKEN not in qs:
-                qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
+            if DEFAULT_IMAGE_TOKEN in qs:
+                qs = qs.replace(DEFAULT_IMAGE_TOKEN, '').strip()
+            qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
 
         conv = conv_templates[conv_mode].copy()
         conv.append_message(conv.roles[0], qs)
@@ -178,27 +184,21 @@ def run_inference(args):
         keywords = [stop_str]
         stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)
 
-        cur_prompt = question
         with torch.inference_mode():
-            model.update_prompt([[cur_prompt]])
+            model.update_prompt([[qs]])
             output_ids = model.generate(
                 input_ids,
-                images=video,
-                do_sample=True,
-                temperature=0.2,
-                max_new_tokens=1024,
+                images=images,
+                do_sample=True if args.temperature > 0 else False,
+                temperature=args.temperature,
+                max_new_tokens=args.max_new_tokens,
                 use_cache=True,
                 stopping_criteria=[stopping_criteria])
 
         input_token_len = input_ids.shape[1]
-        n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
-        if n_diff_input_output > 0:
-            print(f'[Warning] {n_diff_input_output} output_ids are not the same as the input_ids')
-        outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
-        outputs = outputs.strip()
+        outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0].strip()
         if outputs.endswith(stop_str):
-            outputs = outputs[:-len(stop_str)]
-        outputs = outputs.strip()
+            outputs = outputs[:-len(stop_str)].strip()
 
         sample_set['pred'] = outputs
         ans_file.write(json.dumps(sample_set) + "\n")
