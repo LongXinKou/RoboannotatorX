@@ -7,8 +7,7 @@ from roboannotatorx.model import *
 from roboannotatorx.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
-def load_roboannotator(model_path, model_base=None, load_8bit=False, load_4bit=False, device_map="auto", device="cuda",
-                       args=None):
+def load_roboannotator(model_path, model_base=None, load_8bit=False, load_4bit=False, device_map="auto", device="cuda",):
     kwargs = {"device_map": device_map}
 
     if load_8bit:

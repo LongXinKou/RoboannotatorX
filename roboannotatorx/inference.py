@@ -3,10 +3,12 @@ import torch
 import random
 import numpy as np
 import json
+import yaml
 import os
 
 from tqdm import tqdm
 
+from roboannotatorx.utils import disable_torch_init
 from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from roboannotatorx.conversation import conv_templates, SeparatorStyle
@@ -14,88 +16,134 @@ from roboannotatorx.model.builder import load_roboannotator
 
 
 def parse_args():
-    """
-    Parse command-line arguments.
-    """
     parser = argparse.ArgumentParser()
 
-    # Define the command-line arguments
-    parser.add_argument("--model", type=str, default="LLaMA-VID")
-    parser.add_argument("--model-path", type=str, default=None)  # "/data/ubuntu/LLaMA-VID"
-    parser.add_argument("--model-base", type=str, default=None)  # None
+    # ModelArguments
+    parser.add_argument("--model", type=str, default="")
+    parser.add_argument("--model-path", type=str, default=None)
+    parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--conv-mode", type=str, default=None)
     parser.add_argument("--model-max-length", type=int, default=None)
-    parser.add_argument("--video_fps", type=int, default=1)
+    parser.add_argument('--interval', type=int, default=None)
+
+    # DataArguments
+    parser.add_argument('--data_path', help='Path to the ground truth file containing question.', default=None)
+    parser.add_argument('--image_folder', help='Directory containing image files.', default=None)
+    parser.add_argument('--video_folder', help='Directory containing video files.', default=None)
+    parser.add_argument("--video_fps", type=int, default=0)
     parser.add_argument("--video_stride", type=int, default=2)
 
-    parser.add_argument('--video_dir', help='Directory containing video files.', default=None)
-    parser.add_argument('--gt_file_question', help='Path to the ground truth file containing question.', default=None)
+    # TestArguments
     parser.add_argument('--output_dir', help='Directory to save the model results JSON.', default=None)
-
-    # test
     parser.add_argument('--batch_size', type=int, default=1)
-    parser.add_argument('--test_num', type=int, default=200)
-    parser.add_argument('--interval', type=int, default=10)
     parser.add_argument('--seed', type=int, default=42)
 
     return parser.parse_args()
 
 
-
-def get_dataset_name_from_path(model_path, info='mix'):
-    model_path = model_path.strip("/")
-    model_paths = model_path.split("/")
-    if model_paths[-1] != 'full_model':
-        if model_paths[-1] != 'Finetune':
-            return model_paths[-1]
-        else:
-            return info.strip("/").split("/")[-1].split('.')[0]
-    else:
-        return '_'.join(model_paths[-2:])
+def get_dataset_name_from_path(dataset_path):
+    dataset_path = dataset_path.strip("/")
+    dataset_paths = dataset_path.split("/")
+    return dataset_paths[-1]
 
 
 def run_inference(args):
     random.seed(args.seed)
     print(f"seed {args.seed}")
 
-    if args.model_base is not None:
-        model_name = f"{get_dataset_name_from_path(args.model_path)}_lora"
-        tokenizer, model, image_processor, context_len = load_roboannotator(args.model_path, args.model_base,
-                                                                            args.model_max_length, args=args)
+    # Model
+    disable_torch_init()
+
+    model_name = args.model
+    tokenizer, model, image_processor, context_len = load_roboannotator(
+        model_path=args.model_path,
+        model_base=args.model_base,
+    )
+
+    if "llama-2" in model_name.lower():
+        conv_mode = "llava_llama_2"
+    elif "v1" in model_name.lower():
+        conv_mode = "llava_v1"
     else:
-        model_name = get_dataset_name_from_path(args.model_path)
-        tokenizer, model, image_processor, context_len = load_roboannotator(args.model_path, args.model_max_length,
-                                                                            args=args)
+        conv_mode = "llava_v0"
 
-    conv_mode = "llava_v1"
-    args.conv_mode = conv_mode
+    if args.conv_mode is not None and conv_mode != args.conv_mode:
+        print(
+            "[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}".format(
+                conv_mode, args.conv_mode, args.conv_mode
+            )
+        )
+    else:
+        args.conv_mode = conv_mode
 
-    # Load both ground truth file containing questions and answers
-    with open(args.gt_file_question) as file:
-        gt_questions_answers = json.load(file)
+    # Dataset
+    test_dataset = []
+    if args.data_path.endswith(".json"):
+        with open(args.data_path, "r") as file:
+            test_dataset = json.load(file)
+            print(f"Testing {args.data_path}")
+    elif args.data_path.endswith(".yaml"):
+        with open(args.data_path, "r") as file:
+            yaml_data = yaml.safe_load(file)
+            datasets = yaml_data.get("datasets", [])
+            dataset_paths = [dataset.get("json_path") for dataset in datasets]
+            print(f"Testing {dataset_paths}")
+            for dataset in datasets:
+                json_path = dataset.get("json_path")
+                sampling_strategy = dataset.get("sampling_strategy", "all")
+                sampling_number = None
 
-    # Create the output directory if it doesn't exist
-    dataset_name = get_dataset_name_from_path(args.video_dir, args.gt_file_question)
+                if json_path.endswith(".jsonl"):
+                    cur_data_dict = []
+                    with open(json_path, "r") as json_file:
+                        for line in json_file:
+                            cur_data_dict.append(json.loads(line.strip()))
+                elif json_path.endswith(".json"):
+                    with open(json_path, "r") as json_file:
+                        cur_data_dict = json.load(json_file)
+                else:
+                    raise ValueError(f"Unsupported file type: {json_path}")
+
+                if ":" in sampling_strategy:
+                    sampling_strategy, sampling_number = sampling_strategy.split(":")
+                    if "%" in sampling_number:
+                        sampling_number = math.ceil(int(sampling_number.split("%")[0]) * len(cur_data_dict) / 100)
+                    else:
+                        sampling_number = int(sampling_number)
+
+                # Apply the sampling strategy
+                if sampling_strategy == "first" and sampling_number is not None:
+                    cur_data_dict = cur_data_dict[:sampling_number]
+                elif sampling_strategy == "end" and sampling_number is not None:
+                    cur_data_dict = cur_data_dict[-sampling_number:]
+                elif sampling_strategy == "random" and sampling_number is not None:
+                    random.shuffle(cur_data_dict)
+                    cur_data_dict = cur_data_dict[:sampling_number]
+                test_dataset.extend(cur_data_dict)
+    else:
+        raise ValueError(f"Unsupported file type: {args.data_path}")
+
+    # Test
+    dataset_name = get_dataset_name_from_path(args.data_path)
     output_dir = os.path.join(args.output_dir, dataset_name)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
-    test_num = args.test_num if args.test_num < len(gt_questions_answers) else len(gt_questions_answers)
+    test_num = len(test_dataset)
     answers_file = os.path.join(output_dir, f"{model_name}_{test_num}.json")
     ans_file = open(answers_file, "w")
 
-    test_questions_answers = random.sample(gt_questions_answers, test_num)
     total_frames = []
-    index = 0
-
-    for sample in tqdm(test_questions_answers):
+    for sample in tqdm(test_dataset):
+        if 'image' in sample:
+            pass
+        elif 'video' in sample:
         video_name = sample['video']
         question = sample['conversations'][0]['value']
         answer = sample['conversations'][1]['value']
         question_type = sample['question_type']
 
         sample_set = {'id': video_name, 'question': question, 'answer': answer, 'question_type': question_type}
-        index += 1
+
 
         # Load the video file
         video_path = os.path.join(args.video_dir, video_name)
