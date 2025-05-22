@@ -4,7 +4,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAn
 import torch
 
 from roboannotatorx.model import *
-from roboannotatorx.model.llava_utils.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from roboannotatorx.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
 def load_roboannotator(model_path, model_base=None, load_8bit=False, load_4bit=False, device_map="auto", device="cuda",

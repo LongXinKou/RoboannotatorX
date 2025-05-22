@@ -8,9 +8,9 @@ import os
 from tqdm import tqdm
 from decord import VideoReader, cpu
 
-from roboannotatorx.model.llava_utils.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
-from roboannotatorx.model.llava_utils.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from roboannotatorx.model.llava_utils.conversation import conv_templates, SeparatorStyle
+from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
+from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from roboannotatorx.conversation import conv_templates, SeparatorStyle
 from roboannotatorx.model.builder import load_roboannotator
 
 

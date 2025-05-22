@@ -15,8 +15,8 @@ from decord import VideoReader, cpu
 from llava.mm_utils import tokenizer_image_token
 
 
-from roboannotatorx.model.llava_utils.constants import IMAGE_TOKEN_INDEX, IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from roboannotatorx.model.llava_utils import conversation as conversation_lib
+from roboannotatorx.constants import IMAGE_TOKEN_INDEX, IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from roboannotatorx import conversation as conversation_lib
 
 local_rank = None
 def rank0_print(*args):
