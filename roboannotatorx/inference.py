@@ -4,14 +4,13 @@ import random
 import numpy as np
 import json
 import os
-import time
 
 from tqdm import tqdm
 from decord import VideoReader, cpu
-from llava.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
 
-from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from roboannotatorx.conversation import conv_templates, SeparatorStyle
+from roboannotatorx.model.llava_utils.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
+from roboannotatorx.model.llava_utils.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from roboannotatorx.model.llava_utils.conversation import conv_templates, SeparatorStyle
 from roboannotatorx.model.builder import load_roboannotator
 
 
@@ -155,10 +154,6 @@ def run_inference(args):
                 max_new_tokens=1024,
                 use_cache=True,
                 stopping_criteria=[stopping_criteria])
-
-        torch.cuda.synchronize()
-        peak_mem = torch.cuda.max_memory_allocated() / 1024 / 1024  # MB
-        peak_gpu_mem = max(peak_gpu_mem, peak_mem)
 
         input_token_len = input_ids.shape[1]
         n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()

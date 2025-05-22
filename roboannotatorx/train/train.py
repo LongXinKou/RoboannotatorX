@@ -26,7 +26,7 @@ import transformers
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, LlamaForCausalLM
 
 from roboannotatorx.train.llava_trainer import LLaVATrainer
-from roboannotatorx import conversation as conversation_lib
+from roboannotatorx.model.llava_utils import conversation as conversation_lib
 from roboannotatorx.model import LlavaLlamaRobotForCausalLM
 
 from train_utils import (
