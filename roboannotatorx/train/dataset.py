@@ -11,10 +11,9 @@ from typing import Dict, Sequence
 from dataclasses import dataclass
 from torch.utils.data import Dataset
 from PIL import Image
-from decord import VideoReader, cpu
-from llava.mm_utils import tokenizer_image_token
 
 
+from roboannotatorx.mm_utils import tokenizer_image_token, process_video_with_decord
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from roboannotatorx import conversation as conversation_lib
 
@@ -852,25 +851,8 @@ class LazySupervisedDataset(Dataset):
                     video_file = self.list_data_dict[i]['video']
                     video_folder = self.data_args.video_folder
                     video_file = os.path.join(video_folder, video_file)
-                    suffix = video_file.split('.')[-1]
+                    video, totoal_frame_num = process_video_with_decord(video_file)
 
-                    vr = VideoReader(video_file, ctx=cpu(0))
-                    total_frames = len(vr)
-                    if total_frames == 1:
-                        raise ValueError("Single frame video detected")
-
-                    if self.data_args.video_fps != 0:
-                        # Use specified FPS for sampling
-                        sample_fps = round(vr.get_avg_fps() / self.data_args.video_fps)
-                        frame_idx = [i for i in range(0, total_frames, sample_fps)]
-                    else:
-                        # Use adaptive sampling based on video length
-                        stride = 2 # TODO
-                        frame_idx = list(range(0, total_frames, stride))
-                        if frame_idx[-1] != total_frames - 1:
-                            frame_idx.append(total_frames - 1)
-
-                    video = vr.get_batch(frame_idx).asnumpy()
                     processor = self.data_args.image_processor
                     image = processor.preprocess(video, return_tensors='pt')['pixel_values']
                     sources = preprocess_multimodal(

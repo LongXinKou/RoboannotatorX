@@ -1,6 +1,8 @@
 import torch
 
+from decord import VideoReader, cpu
 from transformers import StoppingCriteria
+
 from constants import IMAGE_TOKEN_INDEX
 
 def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
@@ -64,3 +66,18 @@ class KeywordsStoppingCriteria(StoppingCriteria):
         for i in range(output_ids.shape[0]):
             outputs.append(self.call_for_batch(output_ids[i].unsqueeze(0), scores))
         return all(outputs)
+
+def process_video_with_decord(video_path, video_fps=1, stride=2):
+    vr = VideoReader(video_path, ctx=cpu(0))
+    total_frame_num = len(vr)
+    if total_frame_num == 1:
+        raise ValueError("Single frame video detected")
+
+    if video_fps > 0:
+        fps = round(vr.get_avg_fps() / video_fps)
+        frame_idx = [i for i in range(0, len(vr), fps)]
+    else:  # video_fps = 0
+        frame_idx = list(range(0, total_frame_num, stride))
+
+    video = vr.get_batch(frame_idx).asnumpy()
+    return video, total_frame_num

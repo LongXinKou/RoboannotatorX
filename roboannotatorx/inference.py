@@ -6,7 +6,6 @@ import json
 import os
 
 from tqdm import tqdm
-from decord import VideoReader, cpu
 
 from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria
 from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
@@ -40,24 +39,6 @@ def parse_args():
 
     return parser.parse_args()
 
-
-def load_video(video_path, video_fps=1):
-    vr = VideoReader(video_path, ctx=cpu(0))
-    total_frame_num = len(vr)
-
-    if video_fps > 0:
-        fps = round(vr.get_avg_fps() / video_fps)
-        frame_idx = [i for i in range(0, len(vr), fps)]
-        spare_frames = vr.get_batch(frame_idx).asnumpy()
-        return spare_frames, total_frame_num
-    else:  # video_fps = 0
-        frame_idx = [i for i in range(0, len(vr))]
-        if len(frame_idx) > 2000:  # 4x downsampling
-            frame_idx = frame_idx[::4]
-        elif len(frame_idx) > 500:  # 2x downsampling
-            frame_idx = frame_idx[::2]
-        total_frames = vr.get_batch(frame_idx).asnumpy()
-        return total_frames, total_frame_num
 
 
 def get_dataset_name_from_path(model_path, info='mix'):
