@@ -840,8 +840,9 @@ class LazySupervisedDataset(Dataset):
                     processor = self.data_args.image_processor
 
                     video, total_frame_num = process_video_with_decord(video_path=video_file,
-                                                      video_fps=self.data_args.video_fps,
-                                                      video_stride=self.data_args.video_stride)
+                                                                       image_processor=processor,
+                                                                       video_fps=self.data_args.video_fps,
+                                                                       video_stride=self.data_args.video_stride,)
                     sources = preprocess_multimodal(
                         copy.deepcopy([e["conversations"] for e in sources]),
                         self.data_args)

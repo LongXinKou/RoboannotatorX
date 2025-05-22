@@ -5,9 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a5dd95a9-d009-47bd-b838-85c5dda2bba3" name="更改" comment="readme">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/roboannotatorx/mm_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/mm_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/roboannotatorx/train/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/roboannotatorx/train/dataset.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -127,7 +124,7 @@
       <workItem from="1746796535621" duration="3450000" />
       <workItem from="1747207706225" duration="89000" />
       <workItem from="1747207811668" duration="109000" />
-      <workItem from="1747383449087" duration="68098000" />
+      <workItem from="1747383449087" duration="68188000" />
     </task>
     <task id="LOCAL-00001" summary="readme">
       <option name="closed" value="true" />
