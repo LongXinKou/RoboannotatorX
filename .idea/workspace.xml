@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a5dd95a9-d009-47bd-b838-85c5dda2bba3" name="更改" comment="readme">
-      <change afterPath="$PROJECT_DIR$/roboannotatorx/eval/eval_roboxvqa.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/examples/evaluate/claude.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/examples/evaluate/gemini.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/examples/evaluate/gpt.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/examples/models/roboannotatorx.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/examples/models/roboannotatorx.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,25 +54,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHELLCHECK.PATH": "C:\\Users\\klx\\AppData\\Roaming\\JetBrains\\PyCharm2025.1\\plugins\\Shell Script\\shellcheck.exe",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/klx/Desktop/Document/github-roboannotatorx",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "vcs.Git",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHELLCHECK.PATH&quot;: &quot;C:\\Users\\klx\\AppData\\Roaming\\JetBrains\\PyCharm2025.1\\plugins\\Shell Script\\shellcheck.exe&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/klx/Desktop/Document/github-roboannotatorx&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx\roboannotatorx\eval" />
       <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx\roboannotatorx" />
       <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx\roboannotatorx\model\llava_utils" />
       <recent name="C:\Users\klx\Desktop\Document\github-roboannotatorx\roboannotatorx\model\language_model" />
@@ -130,7 +126,8 @@
       <workItem from="1746796535621" duration="3450000" />
       <workItem from="1747207706225" duration="89000" />
       <workItem from="1747207811668" duration="109000" />
-      <workItem from="1747383449087" duration="74116000" />
+      <workItem from="1747383449087" duration="75572000" />
+      <workItem from="1747984543315" duration="1667000" />
     </task>
     <task id="LOCAL-00001" summary="readme">
       <option name="closed" value="true" />
