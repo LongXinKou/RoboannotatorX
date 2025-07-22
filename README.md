@@ -5,13 +5,15 @@
 <a href='https://huggingface.co/koulx/roboannotatorx'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-blue'></a>
 <a href='https://huggingface.co/datasets/koulx/RoboX-VQA'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-green'></a>
 
-A reliable annotation tool that enhances multimodal large language model to generate high-quality, context-rich annotations for complex long-horizon demonstrations.
+A reliable annotation tool that enhances multimodal large language model to generate high-quality, 
+context-rich annotations for complex long-horizon robotics demonstrations.
 
 ## 🚀 News
 
 [//]: # (- [24/07/04] 🔥 Our work has been accepted to ECCV 2024!)
 [//]: # (- [23/12/05] 🔥 We release the full training and evalution [model]&#40;https://huggingface.co/YanweiLi/llama-vid-7b-full-224-long-video&#41;, [data]&#40;https://huggingface.co/datasets/YanweiLi/LLaMA-VID-Data&#41;, and scripts to support movie chating! )
 [//]: # (- [25/05/09] 🔥 LLaMA-VID is comming! We release the [paper]&#40;https://arxiv.org/abs/2311.17043&#41;, [code]&#40;https://github.com/dvlab-research/LLaMA-VID&#41;, [data]&#40;https://huggingface.co/datasets/YanweiLi/LLaMA-VID-Data&#41;, [models]&#40;https://huggingface.co/YanweiLi&#41;, and [demo]&#40;https://llama-vid.github.io/&#41; for LLaMA-VID!)
+- [25/07/01] 🔥 Our work has been accepted to ICCV 2025!)
 - [25/05/09] 🔥 RoboannotatorX is comming!
 
 ## 📅 TODO
