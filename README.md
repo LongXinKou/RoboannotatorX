@@ -40,3 +40,48 @@ pip install -e .
 pip install ninja
 pip install flash-attn --no-build-isolation
 ```
+
+## 🎯 Training
+
+We organize the data in the format of LLaVA, the folder structure should be organized as follows before training.
+
+```
+data/
+├── Pretrain/
+│   ├── images
+│   ├── bc_z
+│   ├── droid
+│   ├── ...
+│   ├── blip_laion_cc_sbu_558k.json
+│   └── mixing_pretrain_510k.json
+├── Finetune/
+│   ├── images
+│   ├── bc_z
+│   ├── droid
+│   ├── ...
+│   ├── complex_reasoning_77k.json
+    ├── llava_instruct_150k.json
+│   └── mixing_fintune_stage2_886k.json
+│   └── mixing_fintune_stage3_86k.json
+```
+
+### Pretrain
+
+We first establish fundamental visual-language alignments through captioning-based pretraining.
+
+- For image-based dataset, we use 558K image-caption pairs from [LLaVA-filtered CC3M](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain).
+- For video-based dataset, we use 510K video-caption pairs from [RoboX-VQA-Pretrain](https://huggingface.co/datasets/koulx/RoboX-VQA-Pretraining).
+
+### Finetune-Stage2
+
+Based on general visual understanding foundation, we conduct short-horizon instruction fine-tuning.
+
+- For image-based dataset, we use 227K image QA pairs(complex_reasoning_77k + llava_instruct_150k) from [LLaVA-Instruct](https://huggingface.co/datasets/liuhaotian/LLaVA-Instruct-150K).
+- For video-based dataset, we use 886K video QA pairs from [RoboX-VQA-Stage2](https://huggingface.co/datasets/koulx/RoboX-VQA-Stage2).
+
+### Finetune-Stage3s.
+
+We conduct long-horizon instruction fine-tuning with complex robotic demonstrations.
+
+- For video-based dataset, we use 86K video QA pairs from [RoboX-VQA-Stage3](https://huggingface.co/datasets/koulx/RoboX-VQA-Stage3).
+
