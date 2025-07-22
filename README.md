@@ -85,3 +85,11 @@ We conduct long-horizon instruction fine-tuning with complex robotic demonstrati
 
 - For video-based dataset, we use 86K video QA pairs from [RoboX-VQA-Stage3](https://huggingface.co/datasets/koulx/RoboX-VQA-Stage3).
 
+## 🎁 Acknowledgement
+We would like to thank the following repos for their great work:
+
+- This work is built upon the [LLaMA-VID](https://github.com/dvlab-research/LLaMA-VID).
+- This work utilize pre-collected training dataset from [LLaVA](https://github.com/haotian-liu/LLaVA).
+- This work utilizes LLM from [Vicuna](https://github.com/lm-sys/FastChat)
+- This work utilizes pretrained weights from [InstructBLIP](https://github.com/salesforce/LAVIS).
+
