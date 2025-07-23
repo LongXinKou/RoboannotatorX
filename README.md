@@ -87,9 +87,37 @@ We conduct long-horizon instruction fine-tuning with complex robotic demonstrati
 
 ### Training Script
 
-Please make sure you download and organize the data following Preparation before training.
+Please make sure you download and organize the data following Preparation before training. 
+If you are interested in training the model, you can run the following command.
 
+#### Pretraining
 
+```bash
+# 7B model
+bash scripts/train/pretrain_7b.sh
+
+# 13B model
+bash scripts/train/pretrain_13b.sh
+```
+
+#### Finetune-Stage2
+
+```bash
+# 7B model
+bash scripts/train/finetune_stage2_7b.sh
+
+# 13B model
+bash scripts/train/finetune_stage2_13b.sh
+```
+
+#### Finetune-Stage3
+
+```bash
+# 7B model
+bash scripts/train/finetune_stage3_7b.sh
+# 13B model
+bash scripts/train/finetune_stage3_13b.sh
+```
 
 ## 🎁 Acknowledgement
 We would like to thank the following repos for their great work:
