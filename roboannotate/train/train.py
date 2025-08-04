@@ -25,9 +25,9 @@ import torch
 import transformers
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, LlamaForCausalLM
 
-from roboannotatorx.train.llava_trainer import LLaVATrainer
-from roboannotatorx import conversation as conversation_lib
-from roboannotatorx.model import LlavaLlamaRobotForCausalLM
+from roboannotate.train.llava_trainer import LLaVATrainer
+from roboannotate import conversation as conversation_lib
+from roboannotate.model import LlavaLlamaRobotForCausalLM
 
 from train_utils import (
     get_peft_state_maybe_zero_3,

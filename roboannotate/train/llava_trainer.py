@@ -28,27 +28,9 @@ from transformers.utils import (
 )
 
 from typing import List, Optional, Union, Dict, Any
+from train_utils import maybe_zero_3, get_mm_adapter_state_maybe_zero_3
 
 logger = logging.get_logger(__name__)
-
-def maybe_zero_3(param, ignore_status=False, name=None):
-    from deepspeed import zero
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
-    if hasattr(param, "ds_id"):
-        if param.ds_status == ZeroParamStatus.NOT_AVAILABLE:
-            if not ignore_status:
-                print(name, 'no ignore status')
-        with zero.GatheredParameters([param]):
-            param = param.data.detach().cpu().clone()
-    else:
-        param = param.detach().cpu().clone()
-    return param
-
-
-def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
-    to_return = {k: t for k, t in named_params if any(key_match in k for key_match in keys_to_match)}
-    to_return = {k: maybe_zero_3(v, ignore_status=True, name=k).cpu() for k, v in to_return.items()}
-    return to_return
 
 
 def split_to_even_chunks(indices, lengths, num_chunks):
@@ -74,27 +56,34 @@ def split_to_even_chunks(indices, lengths, num_chunks):
 
 
 def get_modality_length_grouped_indices(lengths, batch_size, world_size, generator=None):
-    # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
+    """
+    Group indices by modality (multimodal vs language-only) and then by length.
+    This creates batches that contain similar types of data for efficient processing.
+    """
     assert all(l != 0 for l in lengths), "Should not have zero length."
+    if all(l > 0 for l in lengths) or all(l < 0 for l in lengths):
+        # all samples are in the same modality
+        return get_length_grouped_indices(lengths, batch_size, world_size, generator=generator)
+
+    # Separate multimodal samples (positive lengths) from language-only samples (negative lengths)
     mm_indices, mm_lengths = zip(*[(i, l) for i, l in enumerate(lengths) if l > 0])
     lang_indices, lang_lengths = zip(*[(i, -l) for i, l in enumerate(lengths) if l < 0])
-    # filtered_list = [(i, -l) for i, l in enumerate(lengths) if l < 0]
-    # if not filtered_list:
-    #     raise ValueError("No elements in 'lengths' are less than 0.")
-    # lang_indices, lang_lengths = zip(*filtered_list)
-
-    assert len(mm_indices) > 0, "Should have at least one multimodal sample."
-    assert len(lang_indices) > 0, "Should have at least one language sample."
 
     mm_shuffle = [mm_indices[i] for i in get_length_grouped_indices(mm_lengths, batch_size, world_size, generator=None)]
     lang_shuffle = [lang_indices[i] for i in get_length_grouped_indices(lang_lengths, batch_size, world_size, generator=None)]
-    megabatch_size = world_size * batch_size
-    mm_megabatches = [mm_shuffle[i : i + megabatch_size] for i in range(0, len(mm_shuffle), megabatch_size)]
-    lang_megabatches = [lang_shuffle[i : i + megabatch_size] for i in range(0, len(lang_shuffle), megabatch_size)]
 
+    # Divide into megabatches (data processed by all GPUs in one step)
+    megabatch_size = world_size * batch_size
+    # Split shuffled indices into megabatches
+    mm_megabatches = [mm_shuffle[i: i + megabatch_size] for i in range(0, len(mm_shuffle), megabatch_size)]
+    lang_megabatches = [lang_shuffle[i: i + megabatch_size] for i in range(0, len(lang_shuffle), megabatch_size)]
+
+    # Handle the last partial megabatches from each modality
     last_mm = mm_megabatches[-1]
     last_lang = lang_megabatches[-1]
     additional_batch = last_mm + last_lang
+
+    # Randomly shuffle the order of complete megabatches
     megabatches = mm_megabatches[:-1] + lang_megabatches[:-1]
     megabatch_indices = torch.randperm(len(megabatches), generator=generator)
     megabatches = [megabatches[i] for i in megabatch_indices]
@@ -106,17 +95,23 @@ def get_modality_length_grouped_indices(lengths, batch_size, world_size, generat
     if len(additional_batch) > 0:
         megabatches.append(additional_batch)
 
+    # Flatten the list of megabatches
     return [i for megabatch in megabatches for i in megabatch]
 
 
 def get_length_grouped_indices(lengths, batch_size, world_size, generator=None, merge=True):
-    # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
+    """
+    Group indices by sequence length to minimize padding and improve training efficiency.
+    """
     indices = torch.randperm(len(lengths), generator=generator)
+    # Divide into megabatches (data processed by all GPUs in one step)
     megabatch_size = world_size * batch_size
-    megabatches = [indices[i : i + megabatch_size].tolist() for i in range(0, len(lengths), megabatch_size)]
+    megabatches = [indices[i: i + megabatch_size].tolist() for i in range(0, len(lengths), megabatch_size)]
+    # Sort each megabatch by length (longest first)
     megabatches = [sorted(megabatch, key=lambda i: lengths[i], reverse=True) for megabatch in megabatches]
+    # Split each sorted megabatch into chunks for each GPU
     megabatches = [split_to_even_chunks(megabatch, lengths, world_size) for megabatch in megabatches]
-
+    # Flatten into a single list
     return [i for megabatch in megabatches for batch in megabatch for i in batch]
 
 
@@ -127,12 +122,12 @@ class LengthGroupedSampler(Sampler):
     """
 
     def __init__(
-        self,
-        batch_size: int,
-        world_size: int,
-        lengths: Optional[List[int]] = None,
-        generator=None,
-        group_by_modality: bool = False,
+            self,
+            batch_size: int,
+            world_size: int,
+            lengths: Optional[List[int]] = None,
+            generator=None,
+            group_by_modality: bool = False,
     ):
         if lengths is None:
             raise ValueError("Lengths must be provided.")
@@ -148,15 +143,20 @@ class LengthGroupedSampler(Sampler):
 
     def __iter__(self):
         if self.group_by_modality:
-            indices = get_modality_length_grouped_indices(self.lengths, self.batch_size, self.world_size, generator=self.generator)
+            indices = get_modality_length_grouped_indices(self.lengths, self.batch_size, self.world_size,
+                                                          generator=self.generator)
         else:
-            indices = get_length_grouped_indices(self.lengths, self.batch_size, self.world_size, generator=self.generator)
+            indices = get_length_grouped_indices(self.lengths, self.batch_size, self.world_size,
+                                                 generator=self.generator)
         return iter(indices)
 
 
 class LLaVATrainer(Trainer):
 
     def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
+        """
+        Create a custom sampler for training data that handles multimodal inputs.
+        """
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
@@ -165,7 +165,7 @@ class LLaVATrainer(Trainer):
             print(self.train_dataset)
             return LengthGroupedSampler(
                 self.args.train_batch_size,
-                world_size=self.args.world_size, # * self.args.gradient_accumulation_steps, # Keep raw setting
+                world_size=self.args.world_size * self.args.gradient_accumulation_steps, # Keep raw setting
                 lengths=lengths,
                 group_by_modality=True,
             )
@@ -186,6 +186,7 @@ class LLaVATrainer(Trainer):
 
         opt_model = self.model
 
+        # Parse learning rate multipliers if provided
         if self.args.lr_multi is not None:
             lr_multi_dict = {}
             for _dict in self.args.lr_multi.split('\\'):
@@ -195,28 +196,36 @@ class LLaVATrainer(Trainer):
         if self.optimizer is None:
             decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
             decay_parameters = [name for name in decay_parameters if "bias" not in name]
+
             if self.args.lr_multi is not None:
                 optimizer_grouped_parameters = [
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad and not any([_key in n for _key in lr_multi_dict.keys()]))
+                            p for n, p in opt_model.named_parameters() if (
+                                        n in decay_parameters and p.requires_grad and not any(
+                                    [_key in n for _key in lr_multi_dict.keys()]))
                         ],
                         "weight_decay": self.args.weight_decay,
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad and not any([_key in n for _key in lr_multi_dict.keys()]))
+                            p for n, p in opt_model.named_parameters() if (
+                                        n not in decay_parameters and p.requires_grad and not any(
+                                    [_key in n for _key in lr_multi_dict.keys()]))
                         ],
                         "weight_decay": 0.0,
                     },
                 ]
+                # Create additional parameter groups with custom learning rates
                 for _key in lr_multi_dict:
                     _key_decay = [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad and _key in n)
-                        ]
+                        p for n, p in opt_model.named_parameters() if
+                        (n in decay_parameters and p.requires_grad and _key in n)
+                    ]
                     _key_no_decay = [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad and _key in n)
-                        ]
+                        p for n, p in opt_model.named_parameters() if
+                        (n not in decay_parameters and p.requires_grad and _key in n)
+                    ]
                     if len(_key_decay) > 0:
                         optimizer_grouped_parameters.append(
                             {
@@ -233,8 +242,9 @@ class LLaVATrainer(Trainer):
                                 "weight_decay": 0.0,
                             },
                         )
-                
+
             else:
+                # Standard parameter grouping (with/without weight decay)
                 optimizer_grouped_parameters = [
                     {
                         "params": [
@@ -244,7 +254,8 @@ class LLaVATrainer(Trainer):
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
+                            p for n, p in opt_model.named_parameters() if
+                            (n not in decay_parameters and p.requires_grad)
                         ],
                         "weight_decay": 0.0,
                     },
@@ -269,10 +280,10 @@ class LLaVATrainer(Trainer):
                     for module in opt_model.modules():
                         if isinstance(module, nn.Embedding):
                             skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
-                            logger.info(f"skipped {module}: {skipped/2**20}M params")
+                            logger.info(f"skipped {module}: {skipped / 2 ** 20}M params")
                             manager.register_module_override(module, "weight", {"optim_bits": 32})
                             logger.debug(f"bitsandbytes: will optimize {module} in fp32")
-                    logger.info(f"skipped: {skipped/2**20}M params")
+                    logger.info(f"skipped: {skipped / 2 ** 20}M params")
 
         return self.optimizer
 
@@ -285,7 +296,7 @@ class LLaVATrainer(Trainer):
             output_dir = os.path.join(run_dir, checkpoint_folder)
 
             # Only save Adapter
-            keys_to_match = ['mm_projector', 'vision_resampler', 'vlm_att', 'clip_qformer']
+            keys_to_match = ['mm_projector', 'vision_resampler', 'vlm_att', 'clip_qformer', 'motion_encoder']
             if getattr(self.args, "use_im_start_end", False):
                 keys_to_match.extend(['embed_tokens', 'embed_in'])
 

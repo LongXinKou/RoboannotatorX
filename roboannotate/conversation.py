@@ -40,6 +40,11 @@ class Conversation:
                 messages[0] = (init_role, "<image>\n" + init_msg)
 
         if self.sep_style == SeparatorStyle.SINGLE:
+            """
+            system_message + sep
+            user: hello + sep
+            assistant: hi + sep
+            """
             ret = self.system + self.sep
             for role, message in messages:
                 if message:
@@ -49,6 +54,11 @@ class Conversation:
                 else:
                     ret += role + ":"
         elif self.sep_style == SeparatorStyle.TWO:
+            """
+            system_message + sep1
+            user: hello + sep1
+            assistant: hi + sep2
+            """
             seps = [self.sep, self.sep2]
             ret = self.system + seps[0]
             for i, (role, message) in enumerate(messages):
@@ -59,6 +69,11 @@ class Conversation:
                 else:
                     ret += role + ":"
         elif self.sep_style == SeparatorStyle.MPT:
+            """
+            system_message + sep
+            user_message + sep
+            assistant_message + sep
+            """
             ret = self.system + self.sep
             for role, message in messages:
                 if message:
@@ -68,6 +83,9 @@ class Conversation:
                 else:
                     ret += role
         elif self.sep_style == SeparatorStyle.LLAMA_2:
+            """
+            [INST] <<SYS>>system_message<</SYS>>user_message [/INST] assistant_reply </s>
+            """
             wrap_sys = lambda msg: f"<<SYS>>\n{msg}\n<</SYS>>\n\n"
             wrap_inst = lambda msg: f"[INST] {msg} [/INST]"
             ret = ""
@@ -89,6 +107,9 @@ class Conversation:
                     ret += ""
             ret = ret.lstrip(self.sep)
         elif self.sep_style == SeparatorStyle.PLAIN:
+            """
+            system_message + message1 + sep1 + message2 + sep2
+            """
             seps = [self.sep, self.sep2]
             ret = self.system
             for i, (role, message) in enumerate(messages):
@@ -268,6 +289,19 @@ conv_llava_v1 = Conversation(
     sep2="</s>",
 )
 
+conv_llava_v1_mmtag = Conversation(
+    system="A chat between a curious user and an artificial intelligence assistant. "
+    "The assistant is able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
+    "The visual content will be provided with the following format: <Image>visual content</Image>.",
+    roles=("USER", "ASSISTANT"),
+    messages=[],
+    offset=0,
+    sep_style=SeparatorStyle.TWO,
+    sep=" ",
+    sep2="</s>",
+    version="v1_mmtag",
+)
+
 conv_vicuna_imgsp_v1 = Conversation(
     system="A chat between a curious user and an artificial intelligence assistant. "
     "The assistant gives helpful, detailed, and polite answers to the user's questions.",
@@ -298,6 +332,15 @@ conv_llava_plain_guided = Conversation(
     version="plain_guided",
     messages=(
     ),
+    offset=0,
+    sep_style=SeparatorStyle.PLAIN,
+    sep="\n",
+)
+
+conv_llava_plain = Conversation(
+    system="",
+    roles=("", ""),
+    messages=[],
     offset=0,
     sep_style=SeparatorStyle.PLAIN,
     sep="\n",

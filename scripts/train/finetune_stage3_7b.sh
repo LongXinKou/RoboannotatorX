@@ -1,35 +1,36 @@
 
 deepspeed roboannotatorx/train/train_mem_robo.py \
     --deepspeed ./scripts/zero2.json \
-    --model_name_or_path ./model_zoo/LLM/vicuna/7B-V1.5/ \
-    --version plain_guided \
-    --data_path data/Pretrain/blip_laion_cc_sbu_558k.json \
-    --image_folder /ephemeral/nf/kisa_v2/Pretrain/images \
-    --video_folder /ephemeral/nf/kisa_v2/Pretrain/ \
+    --lora_enable True \
+    --model_name_or_path /8T/klx/kisa-v2/work_dirs/roboannotatex-v3/roboannotatorx-7b-2x4x-grid8-interval32-v3-stage2-image-video-epoch-1/full_model/ \
+    --version imgsp_v1 \
+    --data_path /8T/klx/kisa-v2/dataset/Finetune/mixing_v2_stage3_97K.json \
+    --image_folder /8T/klx/kisa-v2/dataset/Finetune \
+    --video_folder /8T/klx/kisa-v2/dataset/Finetune \
     --vision_tower ./model_zoo/LAVIS/eva_vit_g.pth \
     --image_processor ./roboannotatorx/processor/clip-patch14-224 \
     --compress_type "grid:8" \
     --interval 32 \
     --mm_projector_type mlp2x_gelu \
-    --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
+    --image_aspect_ratio pad \
+    --group_by_modality_length False \
     --video_fps 0 \
-    --bert_type "qformer_pretrain_freeze" \
+    --bert_type "qformer_pretrain" \
     --num_query 32 \
-    --pretrain_qformer ./model_zoo/LAVIS/instruct_blip_vicuna7b_trimmed.pth \
     --bf16 True \
-    --output_dir ./work_dirs/roboannotatex/v1/roboannotatex-7b-4x-grid8-interval32-pretrain-image-epoch-1 \
+    --output_dir /8T/klx/kisa-v2/work_dirs/roboannotatex-v3/roboannotatorx-7b-2x4x-grid8-interval32-stage4-video-epoch-1  \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 16 \
+    --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 1000 \
+    --save_steps 100 \
     --save_total_limit 1 \
-    --learning_rate 1e-3 \
+    --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \

@@ -38,6 +38,9 @@ pip install -e .
 ```bash
 pip install ninja
 pip install flash-attn --no-build-isolation
+
+# [Option] install the per-commit wheel built by that PR, "https://github.com/Dao-AILab/flash-attention/releases"
+pip install flash_attn-2.6.3+cu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 ```
 
 ## 🎯 Training
@@ -118,6 +121,17 @@ bash scripts/train/finetune_stage3_7b.sh
 # 13B model
 bash scripts/train/finetune_stage3_13b.sh
 ```
+
+## 📊 Inference
+To run inference with the trained model, you can use [`embodied_eval`](https://github.com/LongXinKou/embodied-eval),
+and the command is as follows:
+
+```bash
+bash example/vqa/roboannoatorx.sh
+```
+
+or you can just run `pred.py` directly to generate predictions.
+
 
 ## 🎁 Acknowledgement
 We would like to thank the following repos for their great work:

@@ -7,7 +7,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, \
                          LlamaConfig, LlamaModel, LlamaForCausalLM
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
-from roboannotatorx.model.roboannotatorx_arch import RoboAnnotatorMetaModel, RoboAnnotatorMetaForCausalLM
+from roboannotate.model.roboannotatorx_arch import RoboAnnotatorMetaModel, RoboAnnotatorMetaForCausalLM
 
 
 class LlavaConfig(LlamaConfig):

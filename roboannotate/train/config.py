@@ -20,11 +20,12 @@ class ModelArguments:
     mm_use_im_start_end: bool = field(default=False)
     mm_use_im_patch_token: bool = field(default=True)
     mm_vision_select_feature: Optional[str] = field(default="patch")
-    bert_type: Optional[str] = field(default="qformer_pretrain")
-    num_query: Optional[int] = field(default=32)
-    pretrain_qformer: Optional[str] = field(default=None)
+    bert_type: Optional[str] = field(default="qformer_pretrain") # qformer
+    num_query: Optional[int] = field(default=32) # qformer
+    pretrain_qformer: Optional[str] = field(default=None) # qformer
     compress_type: Optional[str] = field(default=None)
     interval: int = 30
+    max_frame_pos: Optional[int] = field(default=1000)
 
 @dataclass
 class DataArguments:
@@ -33,13 +34,14 @@ class DataArguments:
     lazy_preprocess: bool = False
     is_multimodal: bool = False
     image_folder: Optional[str] = field(default=None)
+    image_aspect_ratio: str = 'square'
     video_folder: Optional[str] = field(default=None)
     video_fps: Optional[int] = field(default=0)
     video_token: Optional[int] = field(default=2)
-    image_aspect_ratio: str = 'square'
     image_grid_pinpoints: Optional[str] = field(default=None)
     input_prompt: Optional[str] = field(default=None)
     refine_prompt: Optional[bool] = field(default=False)
+    video_stride: Optional[int] = field(default=1)
 
 
 @dataclass

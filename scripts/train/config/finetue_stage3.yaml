@@ -1,0 +1,7 @@
+datasets:
+  - json_path: xxxx1.json
+    sampling_strategy: first:1000
+  - json_path: xxxx2.json
+    sampling_strategy: end:3000
+  - json_path: xxxx3.json
+    sampling_strategy: random:999

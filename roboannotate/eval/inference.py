@@ -9,11 +9,11 @@ import os
 
 from tqdm import tqdm
 
-from roboannotatorx.utils import disable_torch_init
-from roboannotatorx.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord, process_images
-from roboannotatorx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from roboannotatorx.conversation import conv_templates, SeparatorStyle
-from roboannotatorx.model.builder import load_roboannotator
+from roboannotate.utils import disable_torch_init
+from roboannotate.mm_utils import tokenizer_image_token, KeywordsStoppingCriteria, process_video_with_decord, process_images
+from roboannotate.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from roboannotate.conversation import conv_templates, SeparatorStyle
+from roboannotate.model.builder import load_roboannotator
 
 
 def parse_args():

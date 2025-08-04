@@ -1,1 +1,1 @@
-from .language_model.llava_llama_roboannotatorx import LlavaLlamaRobotForCausalLM
+from .language_model.llava_llama_robot import LlavaLlamaRobotForCausalLM
