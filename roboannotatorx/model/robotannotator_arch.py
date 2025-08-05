@@ -369,8 +369,7 @@ class RoboAnnotatorMetaForCausalLM(ABC):
                 if image_features.shape[1]%2 == 1:
                     image_features = image_features[:, 1:]
             final_token = self.token_generation(vis_embed=image_features)
-            img_feat_lst.append(final_token)
-            return img_feat_lst
+            return final_token
         
         # video
         for _idx in range(len(image_counts)):
@@ -508,22 +507,19 @@ class RoboAnnotatorMetaForCausalLM(ABC):
             final_token = torch.cat([scene_feature, clip_feature, motion_feature], dim=0)    
         else:
             # key part 1 : Scene feature
-            if self.config.compress_type is None:
-                self.config.compress_type = 'full'
-            else:
-                grid_size = int(self.config.compress_type.split('grid:')[-1])
-                cur_shape = int(vis_embed.shape[1]**0.5)
-                vis_embed = vis_embed.reshape(vis_embed.shape[0], cur_shape, cur_shape, -1)
-                grid_stride = cur_shape // grid_size
-                vis_embed = F.avg_pool2d(vis_embed.permute(0, 3, 1, 2), 
-                                        padding=0,
-                                        kernel_size=grid_stride, 
-                                        stride=grid_stride)
-                vis_embed = vis_embed.permute(0, 2, 3, 1).flatten(1,2) 
 
-            # concat token in shape (n+1, C)
-            vis_embed = self.get_model().mm_projector(vis_embed) # Shape(1, 4, hidden_feature_dim)    
-            vis_embed = einops.rearrange(vis_embed, 'f n h -> (f n) h') # Shape(frame_num, hidden_feature_dim)          
+            # grid_size = int(self.config.compress_type.split('grid:')[-1])
+            # cur_shape = int(vis_embed.shape[1]**0.5)
+            # vis_embed = vis_embed.reshape(vis_embed.shape[0], cur_shape, cur_shape, -1)
+            # grid_stride = cur_shape // grid_size
+            # vis_embed = F.avg_pool2d(vis_embed.permute(0, 3, 1, 2), 
+            #                         padding=0,
+            #                         kernel_size=grid_stride, 
+            #                         stride=grid_stride)
+            # vis_embed = vis_embed.permute(0, 2, 3, 1).flatten(1,2) 
+
+            vis_embed = self.get_model().mm_projector(vis_embed) # Shape(batch_size, num_patch, hidden_feature_dim)    
+            # vis_embed = einops.rearrange(vis_embed, 'f n h -> (f n) h') # Shape(num_patch, hidden_feature_dim)          
             final_token = vis_embed
         
         return final_token
