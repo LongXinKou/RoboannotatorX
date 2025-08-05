@@ -197,14 +197,10 @@ def train():
                         module = module.to(torch.bfloat16)
 
     # Dataloader
-    data_module = make_supervised_data_module(tokenizer=tokenizer,
-                                              data_args=data_args)
-    
+    data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
+
     # Trainer
-    trainer = LLaVATrainer(model=model,
-                    tokenizer=tokenizer,
-                    args=training_args,
-                    **data_module)
+    trainer = LLaVATrainer(model=model, tokenizer=tokenizer, args=training_args, **data_module)
     
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
@@ -216,12 +212,8 @@ def train():
 
     # Saving Model
     if training_args.lora_enable:
-        state_dict = get_peft_state_maybe_zero_3(
-            model.named_parameters(), training_args.lora_bias
-        )
-        non_lora_state_dict = get_peft_state_non_lora_maybe_zero_3(
-            model.named_parameters()
-        )
+        state_dict = get_peft_state_maybe_zero_3(model.named_parameters(), training_args.lora_bias)
+        non_lora_state_dict = get_peft_state_non_lora_maybe_zero_3(model.named_parameters())
         if training_args.local_rank == 0 or training_args.local_rank == -1:
             model.config.save_pretrained(training_args.output_dir)
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
@@ -232,8 +224,7 @@ def train():
             merged_model.save_pretrained(os.path.join(training_args.output_dir, 'full_model'))
             tokenizer.save_pretrained(os.path.join(training_args.output_dir, 'full_model'))
     else:
-        safe_save_model_for_hf_trainer(trainer=trainer,
-                                       output_dir=training_args.output_dir)
+        safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_dir)
 
 
 if __name__ == "__main__":
