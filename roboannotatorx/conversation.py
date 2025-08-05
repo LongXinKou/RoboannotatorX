@@ -268,17 +268,19 @@ conv_llava_v1 = Conversation(
     sep2="</s>",
 )
 
-conv_vicuna_imgsp_v1 = Conversation(
+conv_llava_v1_mmtag = Conversation(
     system="A chat between a curious user and an artificial intelligence assistant. "
-    "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+    "The assistant is able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
+    "The visual content will be provided with the following format: <Image>visual content</Image>.",
     roles=("USER", "ASSISTANT"),
-    version="imgsp_v1",
-    messages=(),
+    messages=[],
     offset=0,
     sep_style=SeparatorStyle.TWO,
     sep=" ",
     sep2="</s>",
+    version="v1_mmtag",
 )
+
 
 conv_vicuna_v1 = Conversation(
     system="A chat between a curious user and an artificial intelligence assistant. "
@@ -295,7 +297,6 @@ conv_vicuna_v1 = Conversation(
 conv_llava_plain_guided = Conversation(
     system="",
     roles=("", ""),
-    version="plain_guided",
     messages=(
     ),
     offset=0,
@@ -304,13 +305,14 @@ conv_llava_plain_guided = Conversation(
 )
 
 
-default_conversation = conv_vicuna_imgsp_v1
+default_conversation = conv_vicuna_v1
 conv_templates = {
     "llava_v0": conv_llava_v0,
+    "llava_v0_mmtag": conv_llava_v0_mmtag,
     "llava_v1": conv_llava_v1,
+    "llava_v1_mmtag": conv_llava_v1_mmtag,
     "vicuna_v1": conv_vicuna_v1,
-    "imgsp_v1": conv_vicuna_imgsp_v1,
-    "plain_guided": conv_llava_plain_guided,
+    "plain": conv_llava_plain_guided,
 }
 
 
