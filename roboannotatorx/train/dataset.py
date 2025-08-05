@@ -118,7 +118,7 @@ class LazySupervisedDataset(Dataset):
                 if isinstance(i, int):
                     sources = [sources]
                 assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
-                
+
                 if 'image' in sources[0]:
                     image_file = self.list_data_dict[i]['image']
                     image_folder = self.data_args.image_folder
@@ -164,10 +164,10 @@ class LazySupervisedDataset(Dataset):
                     else: 
                         frame_idx = [i for i in range(0, total_frames)]
                         # 4x downsampling
-                        stride = 4
-                        frame_idx = list(range(0, total_frames, stride))
-                        if frame_idx[-1] != total_frames - 1:
-                            frame_idx.append(total_frames - 1)
+                        # stride = 4
+                        # frame_idx = list(range(0, total_frames, stride))
+                        # if frame_idx[-1] != total_frames - 1:
+                        #     frame_idx.append(total_frames - 1)
             
                     video = vr.get_batch(frame_idx).asnumpy()
                     processor = self.data_args.image_processor
@@ -187,18 +187,12 @@ class LazySupervisedDataset(Dataset):
                 
 
         has_image = ('image' in self.list_data_dict[i]) or ('video' in self.list_data_dict[i])
-        data_dict = preprocess(
-            sources,
-            self.tokenizer,
-            has_image=has_image,
-            prompt=self.data_args.input_prompt,
-            refine_prompt=self.data_args.refine_prompt)
-        
-        if 'prompt' in data_dict:
-            prompt = data_dict['prompt']
+        data_dict = preprocess(sources, self.tokenizer, has_image=has_image)
+
+        if "prompt" in data_dict:
+            prompt = data_dict["prompt"]
         else:
             prompt = None
-        
 
         if isinstance(i, int):
             data_dict = dict(input_ids=data_dict["input_ids"][0],
@@ -213,10 +207,11 @@ class LazySupervisedDataset(Dataset):
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
             data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
-        
-        # prompt exist in the data
+
         if prompt is not None:
-            data_dict['prompt'] = prompt
+            data_dict["prompt"] = prompt
+        
+        data_dict["id"] = self.list_data_dict[i].get("id", i)
         
         return data_dict
 
